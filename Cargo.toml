@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.102"
-arti-client = "0.42.0"
+arti-client = "0.43.0"
 bb8 = "0.9.1"
 fast-socks5 = "1.0.0"
 tokio = {version = "1.52.3", features = ["full"]}
