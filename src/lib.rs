@@ -166,11 +166,11 @@ pub trait Connector: Send + Sync + 'static {
 
 #[derive(Clone)]
 struct ArtiClientManager {
-    base_client: TorClient<PreferredRuntime>,
+    base_client: Arc<TorClient<PreferredRuntime>>,
 }
 
 impl ManageConnection for ArtiClientManager {
-    type Connection = TorClient<PreferredRuntime>;
+    type Connection = Arc<TorClient<PreferredRuntime>>;
     type Error = anyhow::Error;
 
     fn connect(&self) -> impl Future<Output = Result<Self::Connection, Self::Error>> + Send {
