@@ -10,7 +10,19 @@
   "platformAutomerge": true,
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "arti deps",
+      "matchPackageNames": [
+        "arti-client",
+        "tor-rtcompat"
+      ]
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "automerge": true
     }
   ],
