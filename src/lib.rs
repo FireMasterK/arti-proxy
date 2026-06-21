@@ -7,7 +7,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
-use arti_client::{BootstrapBehavior, StreamPrefs, TorClient, TorClientConfig, config::TorClientConfigBuilder};
+use arti_client::{
+    BootstrapBehavior, StreamPrefs, TorClient, TorClientConfig, config::TorClientConfigBuilder,
+};
 use bb8::{ManageConnection, Pool};
 use fast_socks5::ReplyError;
 use fast_socks5::Socks5Command;
@@ -78,7 +80,8 @@ impl ProxyConfig {
         }
 
         if let Some(value) = lookup("ARTI_PROXY_REQUEST_TIMEOUT_SECS") {
-            config.request_timeout = parse_duration_secs("ARTI_PROXY_REQUEST_TIMEOUT_SECS", &value)?;
+            config.request_timeout =
+                parse_duration_secs("ARTI_PROXY_REQUEST_TIMEOUT_SECS", &value)?;
         }
 
         if let Some(value) = lookup("ARTI_PROXY_NEW_CIRCUIT_PERIOD_SECS") {
@@ -104,7 +107,9 @@ impl ProxyConfig {
         config.cache_dir = lookup("ARTI_PROXY_CACHE_DIR").map(PathBuf::from);
 
         if config.state_dir.is_some() ^ config.cache_dir.is_some() {
-            bail!("ARTI_PROXY_STATE_DIR and ARTI_PROXY_CACHE_DIR must either both be set or both be unset");
+            bail!(
+                "ARTI_PROXY_STATE_DIR and ARTI_PROXY_CACHE_DIR must either both be set or both be unset"
+            );
         }
 
         if config.pool_size == 0 {
@@ -208,6 +213,7 @@ impl ArtiConnector {
         let manager = ArtiClientManager { base_client };
         let pool = Pool::builder()
             .max_size(config.pool_size)
+            .min_idle(config.pool_size)
             .min_idle(Some(config.pool_size))
             .build(manager)
             .await
@@ -326,7 +332,8 @@ where
     match command {
         Socks5Command::TCPConnect => handle_tcp_connect(proto, target_addr, connector).await,
         other => {
-            proto.reply_error(&ReplyError::CommandNotSupported)
+            proto
+                .reply_error(&ReplyError::CommandNotSupported)
                 .await
                 .context("failed to send unsupported command reply")?;
             bail!("unsupported SOCKS command: {other:?}");
@@ -346,7 +353,8 @@ where
     let mut outbound = match connector.connect(target_addr).await {
         Ok(stream) => stream,
         Err(error) => {
-            proto.reply_error(&ReplyError::HostUnreachable)
+            proto
+                .reply_error(&ReplyError::HostUnreachable)
                 .await
                 .context("failed to send connect error reply")?;
             return Err(error);
@@ -365,8 +373,7 @@ where
             if is_benign_disconnect(&error) {
                 return Ok(());
             }
-            return Err(error)
-                .with_context(|| format!("failed while proxying {target_display}"));
+            return Err(error).with_context(|| format!("failed while proxying {target_display}"));
         }
     }
 
@@ -410,7 +417,9 @@ mod tests {
         assert!(is_benign_disconnect(&anyhow::Error::from(
             std::io::Error::new(std::io::ErrorKind::NotConnected, "Stream not connected")
         )));
-        assert!(is_benign_disconnect(&anyhow::anyhow!("Stream not connected")));
+        assert!(is_benign_disconnect(&anyhow::anyhow!(
+            "Stream not connected"
+        )));
         assert!(is_benign_disconnect(&anyhow::Error::from(
             std::io::Error::from(std::io::ErrorKind::BrokenPipe)
         )));
@@ -422,7 +431,10 @@ mod tests {
     #[test]
     fn config_reads_env_overrides() {
         let env = HashMap::from([
-            ("ARTI_PROXY_LISTEN_ADDR".to_owned(), "127.0.0.1:1337".to_owned()),
+            (
+                "ARTI_PROXY_LISTEN_ADDR".to_owned(),
+                "127.0.0.1:1337".to_owned(),
+            ),
             ("ARTI_PROXY_POOL_SIZE".to_owned(), "16".to_owned()),
             (
                 "ARTI_PROXY_NEW_CIRCUIT_PERIOD_SECS".to_owned(),
@@ -436,9 +448,18 @@ mod tests {
                 "ARTI_PROXY_CIRCUIT_BUILD_TIMEOUT_SECS".to_owned(),
                 "15".to_owned(),
             ),
-            ("ARTI_PROXY_OPTIMISTIC_STREAMS".to_owned(), "false".to_owned()),
-            ("ARTI_PROXY_STATE_DIR".to_owned(), "/tmp/arti-state".to_owned()),
-            ("ARTI_PROXY_CACHE_DIR".to_owned(), "/tmp/arti-cache".to_owned()),
+            (
+                "ARTI_PROXY_OPTIMISTIC_STREAMS".to_owned(),
+                "false".to_owned(),
+            ),
+            (
+                "ARTI_PROXY_STATE_DIR".to_owned(),
+                "/tmp/arti-state".to_owned(),
+            ),
+            (
+                "ARTI_PROXY_CACHE_DIR".to_owned(),
+                "/tmp/arti-cache".to_owned(),
+            ),
         ]);
 
         let config = ProxyConfig::from_lookup(|key| env.get(key).cloned()).unwrap();
